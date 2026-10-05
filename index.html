@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Naive Bayes 2 post read</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500;1,9..144,600&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<style>
+  :root{
+    --green-950:#0a2318; --green-900:#0f2e1f; --green-800:#163f2a; --green-700:#1e5236; --green-600:#2a6a45;
+    --yellow-600:#c99a12; --yellow-500:#eab421; --yellow-400:#f3c948; --yellow-200:#f9e3a0; --yellow-100:#fcefc4;
+    --cream:#faf6e9; --paper:#fffdf6; --ink:#132018; --ink-soft:#3c4a40; --line:#ddd2a6; --red:#a3321f;
+    --shadow:0 1px 0 rgba(19,32,24,.06); --radius:3px; --maxw:700px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto;} *{animation-duration:.001ms !important; transition-duration:.001ms !important;} }
+  body{ margin:0; background:var(--cream); color:var(--ink); font-family:"Figtree",system-ui,sans-serif; font-size:17px; line-height:1.65; -webkit-font-smoothing:antialiased; }
+  h1,h2,h3,h4{ font-family:"Fraunces",Georgia,serif; color:var(--green-950); line-height:1.15; margin:0 0 .5em; font-weight:700; }
+  h2{ font-size:1.7rem; font-weight:600; } h3{ font-size:1.25rem; font-weight:600; }
+  p{ margin:0 0 1.1em; } a{ color:var(--green-700); }
+  .katex-display{ margin:1.1em 0; overflow-x:auto; overflow-y:hidden; padding:.2em 0; }
+  code, .mono{ font-family:"IBM Plex Mono",monospace; } img{ max-width:100%; display:block; } button{ font-family:inherit; }
+
+  .wrap{ max-width:var(--maxw); margin:0 auto; padding:0 24px; }
+  .page{ display:grid; grid-template-columns:56px minmax(0,1fr); gap:0 28px; max-width:calc(var(--maxw) + 56px + 28px); margin:0 auto; padding:0 24px; }
+  @media (max-width:880px){ .page{ grid-template-columns:1fr; } .rail{ display:none; } }
+
+  .rail{ position:sticky; top:28px; align-self:start; height:calc(100vh - 56px); display:flex; flex-direction:column; align-items:center; padding-top:8px; }
+  .rail-line{ width:2px; flex:1; background:var(--line); margin:6px 0; border-radius:2px; }
+  .rail-dot{ width:11px; height:11px; border-radius:50%; background:var(--paper); border:2px solid var(--green-600); cursor:pointer; flex:none; transition:background .15s, transform .15s; }
+  .rail-dot:hover{ transform:scale(1.2); }
+  .rail-dot.active{ background:var(--yellow-500); border-color:var(--yellow-600); }
+  .rail-dot:focus-visible{ outline:3px solid var(--yellow-500); outline-offset:2px; }
+
+  .pillnav{ display:none; position:sticky; top:0; z-index:20; background:var(--cream); border-bottom:1px solid var(--line); overflow-x:auto; white-space:nowrap; padding:10px 16px; gap:8px; }
+  .pillnav a{ display:inline-block; margin-right:8px; padding:6px 12px; border:1px solid var(--line); border-radius:20px; font-size:.82rem; text-decoration:none; color:var(--ink-soft); background:var(--paper); }
+  @media (max-width:880px){ .pillnav{ display:flex; } }
+
+  .hero{ background:linear-gradient(180deg, var(--green-950), var(--green-900) 70%, var(--green-800)); color:var(--yellow-100); padding:64px 24px 80px; position:relative; overflow:hidden; }
+  .hero::after{ content:""; position:absolute; right:-60px; top:-60px; width:260px; height:260px; border-radius:50%; background:radial-gradient(circle at 35% 35%, var(--yellow-400), transparent 70%); opacity:.35; }
+  .hero-inner{ max-width:var(--maxw); margin:0 auto; position:relative; }
+  .tag{ display:inline-flex; align-items:center; gap:8px; font-size:.82rem; color:var(--green-950); background:var(--yellow-400); padding:5px 12px 5px 10px; border-radius:20px; font-weight:600; margin-bottom:22px; }
+  .tag .dot{ width:7px; height:7px; border-radius:50%; background:var(--green-900); }
+  .hero h1{ color:var(--yellow-100); font-size:2.5rem; font-weight:700; letter-spacing:-.01em; margin-bottom:.35em; }
+  .hero .lede{ color:#cfe4d6; font-size:1.08rem; max-width:52ch; }
+  .stamp{ margin-top:34px; border:1.5px dashed var(--yellow-500); border-radius:8px; padding:18px 20px; background:rgba(234,180,33,.07); }
+  .stamp .ticket-no{ font-family:"IBM Plex Mono",monospace; font-size:.78rem; letter-spacing:.04em; color:var(--yellow-400); display:block; margin-bottom:8px; }
+  .stamp p{ color:#e8ecdf; font-style:italic; margin:0; font-size:.98rem; }
+  .stamp p::before, .stamp p::after{ content:'"'; font-style:normal; }
+  .stamp .who{ display:block; margin-top:10px; font-style:normal; color:#9fb7a6; font-size:.82rem; }
+
+  main{ padding:46px 0 40px; }
+  section{ padding:30px 0 6px; }
+  .section-head{ display:flex; align-items:baseline; gap:12px; margin-bottom:6px; }
+  .section-num{ font-family:"IBM Plex Mono",monospace; font-size:.85rem; color:var(--yellow-600); background:var(--yellow-100); border:1px solid var(--yellow-400); padding:2px 8px; border-radius:4px; flex:none; }
+  .kicker{ font-size:.86rem; color:var(--green-700); font-weight:600; margin:0 0 4px; }
+  ul, ol{ padding-left:1.3em; margin:0 0 1.1em; } li{ margin-bottom:.4em; }
+
+  .goals{ list-style:none; padding:0; margin:20px 0 0; display:flex; flex-direction:column; gap:10px; }
+  .goals li{ display:flex; gap:10px; align-items:flex-start; background:var(--paper); border:1px solid var(--line); border-radius:var(--radius); padding:11px 14px; font-size:.95rem; }
+  .goals li::before{ content:"✓"; color:var(--green-700); font-weight:700; flex:none; }
+
+  blockquote{ margin:0 0 1.1em; padding:12px 18px; border-left:3px solid var(--yellow-500); background:var(--yellow-100); border-radius:0 4px 4px 0; font-style:italic; color:var(--ink-soft); }
+  figure{ margin:18px 0 26px; } figure img{ border:1px solid var(--line); border-radius:6px; background:var(--paper); }
+  figcaption{ font-size:.85rem; color:var(--ink-soft); margin-top:8px; text-align:center; }
+
+  .callout{ border:1px solid var(--line); background:var(--paper); border-radius:6px; padding:18px 20px; margin:20px 0; }
+  .callout.think{ border-color:var(--green-600); background:#eef5ef; }
+  .callout.think .label{ font-weight:700; color:var(--green-700); font-size:.82rem; display:block; margin-bottom:6px; }
+  .callout.warn{ border-color:var(--red); background:#fbeeea; }
+  .callout.warn .label{ color:var(--red); font-weight:700; font-size:.82rem; display:block; margin-bottom:6px; }
+
+  .reveal-btn{ margin-top:10px; background:var(--green-900); color:var(--yellow-200); border:none; padding:9px 16px; border-radius:20px; font-size:.86rem; font-weight:600; cursor:pointer; }
+  .reveal-btn:hover{ background:var(--green-800); }
+  .reveal-btn:focus-visible{ outline:3px solid var(--yellow-500); outline-offset:2px; }
+  .reveal-box{ display:none; margin-top:14px; padding-top:14px; border-top:1px dashed var(--line); }
+  .reveal-box.shown{ display:block; }
+
+  .formula-card{ background:var(--green-950); color:var(--yellow-100); border-radius:8px; padding:20px 22px; margin:20px 0; }
+  .formula-card .katex{ color:var(--yellow-100); }
+  .formula-card .fc-label{ font-size:.78rem; color:var(--yellow-500); font-weight:700; margin-bottom:6px; display:block; }
+
+  .calc{ border:1px solid var(--line); background:var(--paper); border-radius:8px; padding:20px; margin:20px 0; }
+  .calc-grid{ display:grid; gap:10px; margin-bottom:14px; }
+  .calc-row{ display:flex; justify-content:space-between; font-size:.92rem; padding:7px 0; border-bottom:1px dotted var(--line); }
+  .calc-row .k{ color:var(--ink-soft); } .calc-row .v{ font-family:"IBM Plex Mono",monospace; font-weight:600; }
+
+  .toggle{ position:relative; width:52px; height:28px; background:var(--green-700); border-radius:20px; border:none; cursor:pointer; flex:none; }
+  .toggle::after{ content:""; position:absolute; top:3px; left:3px; width:22px; height:22px; background:var(--yellow-400); border-radius:50%; transition:transform .18s; }
+  .toggle[aria-pressed="true"]::after{ transform:translateX(24px); }
+  .toggle:focus-visible{ outline:3px solid var(--yellow-500); outline-offset:3px; }
+  .toggle-wrap{ display:flex; align-items:center; gap:12px; margin:18px 0 10px; flex-wrap:wrap; }
+  .toggle-label{ font-size:.92rem; font-weight:600; }
+
+  input[type="range"]{ width:100%; accent-color:var(--green-700); }
+  .slider-wrap{ margin:14px 0; } .slider-readout{ display:flex; justify-content:space-between; font-size:.8rem; color:var(--ink-soft); margin-top:4px; }
+  .preset-row{ display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 16px; }
+  .preset-btn{ border:1px solid var(--line); background:var(--yellow-100); padding:6px 12px; border-radius:16px; font-family:"IBM Plex Mono",monospace; font-size:.8rem; cursor:pointer; }
+  .preset-btn.active{ background:var(--green-900); color:var(--yellow-200); border-color:var(--green-900); }
+  .prob-bar-track{ height:22px; background:var(--cream); border:1px solid var(--line); border-radius:12px; overflow:hidden; margin-top:10px; position:relative; }
+  .prob-bar-fill{ height:100%; background:linear-gradient(90deg, var(--yellow-500), var(--green-600)); transition:width .18s; }
+  .prob-bar-track .midline{ position:absolute; left:50%; top:0; bottom:0; width:1px; background:var(--red); opacity:.6; }
+  .prob-readout{ margin-top:10px; font-size:1rem; } .prob-readout .num{ font-family:"IBM Plex Mono",monospace; font-weight:700; color:var(--green-800); }
+
+  .balance-row{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:18px 0; }
+  @media (max-width:560px){ .balance-row{ grid-template-columns:1fr; } }
+  .score-card{ border:1px solid var(--line); border-radius:8px; padding:14px 16px; background:var(--paper); }
+  .score-card h4{ margin:0 0 8px; font-family:"IBM Plex Mono",monospace; font-size:.82rem; color:var(--ink-soft); font-weight:600; }
+  .score-card .score-num{ font-size:1.4rem; font-weight:700; font-family:"IBM Plex Mono",monospace; color:var(--green-800); }
+  .score-bar-track{ height:14px; background:var(--cream); border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-top:8px; }
+  .score-bar-fill{ height:100%; background:var(--yellow-500); transition:width .2s; }
+  .score-card.winner{ border-color:var(--green-700); box-shadow:0 0 0 2px rgba(30,82,54,.15) inset; }
+  .score-card.winner .score-bar-fill{ background:var(--green-600); }
+  .winner-banner{ text-align:center; font-weight:700; margin-top:6px; padding:10px; border-radius:6px; background:var(--yellow-100); border:1px solid var(--yellow-400); font-size:.92rem; }
+
+  .barchart{ display:flex; align-items:flex-end; gap:14px; height:180px; margin:20px 0 6px; padding:0 4px; border-bottom:1px solid var(--line); }
+  .barchart .bcol{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; }
+  .barchart .bfill{ width:100%; max-width:52px; background:var(--green-600); border-radius:4px 4px 0 0; position:relative; transition:height .25s; }
+  .barchart .bfill.underflow{ background:repeating-linear-gradient(45deg, var(--red), var(--red) 6px, #c45a44 6px, #c45a44 12px); }
+  .barchart .bfill.best{ background:var(--yellow-500); }
+  .barchart .bval{ font-size:.72rem; font-family:"IBM Plex Mono",monospace; position:absolute; top:-20px; left:0; right:0; text-align:center; color:var(--ink-soft); }
+  .barchart-labels{ display:flex; gap:14px; padding:0 4px; margin-bottom:22px; }
+  .barchart-labels span{ flex:1; text-align:center; font-size:.75rem; color:var(--ink-soft); font-family:"IBM Plex Mono",monospace; }
+
+  table{ width:100%; border-collapse:collapse; margin:20px 0; font-size:.92rem; }
+  th, td{ text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); }
+  th{ background:var(--green-950); color:var(--yellow-200); font-weight:600; }
+  tr:nth-child(even) td{ background:rgba(234,180,33,.07); }
+  tr.highlight td{ background:var(--yellow-200) !important; font-weight:700; }
+  .sort-btns{ display:flex; gap:8px; flex-wrap:wrap; margin:16px 0 4px; }
+  .sort-btn{ border:1px solid var(--green-700); background:var(--paper); color:var(--green-800); padding:8px 14px; border-radius:18px; font-size:.84rem; cursor:pointer; font-weight:600; }
+  .sort-btn.active{ background:var(--green-900); color:var(--yellow-200); border-color:var(--green-900); }
+  .sort-insight{ font-size:.88rem; color:var(--ink-soft); margin-top:10px; min-height:1.4em; }
+
+  .optiongrid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:18px 0; }
+  @media (max-width:560px){ .optiongrid{ grid-template-columns:1fr; } }
+  .optioncard{ border:1px solid var(--line); background:var(--paper); border-radius:8px; padding:16px 18px; }
+  .optioncard h4{ margin:0 0 6px; font-family:"Fraunces",serif; font-size:1.02rem; color:var(--green-900); }
+  .optioncard.pref{ border-color:var(--green-700); background:#eef6f0; }
+  .optioncard .badge{ display:inline-block; font-size:.72rem; font-weight:700; background:var(--yellow-400); color:var(--green-950); padding:2px 8px; border-radius:10px; margin-bottom:8px; }
+
+  .statrow{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:18px 0; }
+  @media (max-width:560px){ .statrow{ grid-template-columns:1fr; } }
+  .statcard{ background:var(--green-950); color:var(--yellow-100); border-radius:8px; padding:16px 18px; text-align:center; }
+  .statcard .big{ font-family:"IBM Plex Mono",monospace; font-size:1.3rem; font-weight:700; color:var(--yellow-300); }
+  .statcard .lbl{ font-size:.8rem; color:#cfe4d6; margin-top:4px; }
+
+  .repeat-demo{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin:14px 0; }
+  .repeat-words{ font-family:"IBM Plex Mono",monospace; background:var(--yellow-100); border:1px solid var(--yellow-400); border-radius:6px; padding:10px 14px; font-size:.95rem; }
+  .repeat-vec{ font-family:"IBM Plex Mono",monospace; background:var(--green-950); color:var(--yellow-200); border-radius:6px; padding:10px 14px; font-size:.95rem; }
+
+  .console{ background:var(--green-950); color:#d8ecd8; border-radius:8px; padding:18px 20px; margin:18px 0; font-family:"IBM Plex Mono",monospace; font-size:.88rem; }
+  .console .line{ margin-bottom:6px; } .console .label{ color:#9fb7a6; } .console .val{ color:var(--yellow-300); font-weight:700; }
+
+  .quiz{ border:1.5px solid var(--green-700); border-radius:8px; background:var(--paper); margin:26px 0; overflow:hidden; }
+  .quiz-head{ background:var(--green-900); color:var(--yellow-100); padding:12px 18px; font-weight:600; font-size:.92rem; display:flex; justify-content:space-between; align-items:center; }
+  .quiz-head span.qtag{ font-family:"IBM Plex Mono",monospace; font-size:.76rem; background:var(--yellow-500); color:var(--green-950); padding:2px 8px; border-radius:4px; }
+  .quiz-body{ padding:18px 20px 20px; } .quiz-q{ font-size:1rem; margin-bottom:14px; }
+  .quiz-opts{ display:flex; flex-direction:column; gap:9px; margin-bottom:6px; }
+  .quiz-opt{ display:block; width:100%; text-align:left; border:1px solid var(--line); background:var(--cream); padding:11px 14px; border-radius:6px; cursor:pointer; font-size:.92rem; color:var(--ink); }
+  .quiz-opt:hover{ border-color:var(--green-600); }
+  .quiz-opt:focus-visible{ outline:3px solid var(--yellow-500); outline-offset:2px; }
+  .quiz-opt.correct{ background:#eaf5ec; border-color:var(--green-700); font-weight:600; }
+  .quiz-opt.incorrect{ background:#fbeeea; border-color:var(--red); }
+  .quiz-opt[disabled]{ cursor:default; }
+  .quiz-feedback{ display:none; margin-top:14px; padding:13px 15px; border-radius:6px; font-size:.9rem; line-height:1.55; }
+  .quiz-feedback.shown{ display:block; }
+  .quiz-feedback.right{ background:#eaf5ec; border:1px solid var(--green-700); }
+  .quiz-feedback.wrong{ background:#fbeeea; border:1px solid var(--red); }
+  .quiz-feedback .verdict{ font-weight:700; display:block; margin-bottom:4px; }
+
+  .takeaways{ list-style:none; padding:0; margin:18px 0; display:flex; flex-direction:column; gap:10px; }
+  .takeaways li{ background:var(--paper); border-left:4px solid var(--yellow-500); border-radius:0 6px 6px 0; padding:12px 16px; font-size:.95rem; box-shadow:var(--shadow); }
+
+  footer{ background:var(--green-950); color:#9fb7a6; padding:34px 24px 44px; text-align:center; margin-top:40px; }
+  footer .fname{ color:var(--yellow-300); font-family:"Fraunces",serif; font-weight:600; font-size:1.05rem; }
+  footer p{ margin:6px 0 0; font-size:.82rem; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-inner">
+    <span class="tag"><span class="dot"></span>MailNest · Trust &amp; Safety</span>
+    <h1>Naive Bayes 2 post read</h1>
+    <p class="lede">From a correct equation to a filter that actually ships: tuning alpha, surviving imbalance, staying numerically stable, and reading off exactly which words drove each decision.</p>
+    <div class="stamp">
+      <span class="ticket-no">TICKET #1 · CONTINUED</span>
+      <p>The math convinced me. Now show me it actually works: tune it properly, tell me if it'll behave badly on our imbalanced inbox, and let's ship a real filter.</p>
+      <span class="who">— Head of Trust &amp; Safety</span>
+    </div>
+  </div>
+</div>
+
+<nav class="pillnav" aria-label="Section navigation">
+  <a href="#intro">Intro</a>
+  <a href="#alpha">Alpha</a>
+  <a href="#imbalance">Imbalance</a>
+  <a href="#underflow">Underflow</a>
+  <a href="#importance">Feature importance</a>
+  <a href="#outliers">Outliers</a>
+  <a href="#variants">Bernoulli vs Multinomial</a>
+  <a href="#filter">Building the filter</a>
+  <a href="#wrapup">Wrap-up</a>
+</nav>
+
+<div class="page">
+  <nav class="rail" aria-label="Reading progress">
+    <div class="rail-dot active" data-target="intro" tabindex="0" role="link" aria-label="Go to Intro"></div><div class="rail-line"></div>
+    <div class="rail-dot" data-target="alpha" tabindex="0" role="link" aria-label="Go to Alpha"></div><div class="rail-line"></div>
+    <div class="rail-dot" data-target="imbalance" tabindex="0" role="link" aria-label="Go to Imbalance"></div><div class="rail-line"></div>
+    <div class="rail-dot" data-target="underflow" tabindex="0" role="link" aria-label="Go to Underflow"></div><div class="rail-line"></div>
+    <div class="rail-dot" data-target="importance" tabindex="0" role="link" aria-label="Go to Feature importance"></div><div class="rail-line"></div>
+    <div class="rail-dot" data-target="outliers" tabindex="0" role="link" aria-label="Go to Outliers"></div><div class="rail-line"></div>
+    <div class="rail-dot" data-target="variants" tabindex="0" role="link" aria-label="Go to Bernoulli vs Multinomial"></div><div class="rail-line"></div>
+    <div class="rail-dot" data-target="filter" tabindex="0" role="link" aria-label="Go to Building the filter"></div><div class="rail-line"></div>
+    <div class="rail-dot" data-target="wrapup" tabindex="0" role="link" aria-label="Go to Wrap-up"></div>
+  </nav>
+
+  <main>
+
+  <section id="intro">
+    <p class="kicker">Picking up the thread</p>
+    <h2>Continuing the story: MailNest</h2>
+    <p>The theory held up. Now Trust &amp; Safety wants proof it survives contact with a messy, imbalanced inbox — and a filter they can actually ship.</p>
+    <p>By the end of this read, you'll be able to:</p>
+    <ul class="goals">
+      <li>Explain why the Laplace smoothing constant, alpha, is really a hyperparameter, and what happens at both extremes</li>
+      <li>Explain how class imbalance affects Naive Bayes' predictions, and why rebalancing fixes it without touching the likelihoods</li>
+      <li>Explain the underflow problem, and how working in log-space solves it</li>
+      <li>Read off feature importance directly from a trained Naive Bayes model</li>
+      <li>Distinguish outliers at training time from outliers at test time, and handle each correctly</li>
+      <li>Explain the difference between Bernoulli and Multinomial Naive Bayes</li>
+      <li>Train, tune and evaluate a real spam classifier</li>
+    </ul>
+  </section>
+
+  <section id="alpha">
+    <div class="section-head"><span class="section-num">Mission 1</span><h2 style="margin-bottom:0">Alpha is a hyperparameter, not just a hack</h2></div>
+    <p>Last time, <span class="katex-inline">$\alpha = 1$</span> was picked almost as an afterthought — just enough to avoid dividing by zero. Here's what happens at the extremes, and why alpha deserves to be tuned just as carefully as <span class="katex-inline">$k$</span> in kNN.</p>
+    <p>Say the training data has <span class="katex-inline">$n_1 = 100$</span> spam messages, and a word <span class="katex-inline">$w_1$</span> occurs in <span class="katex-inline">$n_{j1} = 10$</span> of them. Drag the slider or use a preset to see the smoothed likelihood shift:</p>
+
+    <div class="calc">
+      <div class="preset-row">
+        <button class="preset-btn active" data-alpha="0">α = 0</button>
+        <button class="preset-btn" data-alpha="1">α = 1</button>
+        <button class="preset-btn" data-alpha="100">α = 100</button>
+        <button class="preset-btn" data-alpha="10000">α = 10,000</button>
+      </div>
+      <div class="slider-wrap">
+        <input type="range" id="alphaSlider1" min="0" max="10000" step="1" value="0">
+        <div class="slider-readout"><span>0</span><span id="alphaVal1">α = 0</span><span>10,000</span></div>
+      </div>
+      <div class="prob-readout">P(w₁ | y=1) = <span class="num" id="alphaFormula1">(10 + 0) / (100 + 2×0)</span> = <span class="num" id="alphaResult1">0.1000</span></div>
+      <div class="prob-bar-track"><div class="midline"></div><div class="prob-bar-fill" id="alphaBar1" style="width:10%"></div></div>
+      <div class="slider-readout"><span>0.0</span><span style="color:var(--red)">0.5 (pure guess)</span><span>1.0</span></div>
+    </div>
+
+    <div class="callout think">
+      <span class="label">Think it through</span>
+      As alpha grows huge, do you expect every word's likelihood to drift toward the <em>same</em> value, or stay spread out based on how often each word actually appeared?
+      <button class="reveal-btn" data-reveal="r1">Reveal the answer</button>
+      <div class="reveal-box" id="r1">They all drift toward the same value: <span class="katex-inline">$1/C = 0.5$</span>. When <span class="katex-inline">$\alpha$</span> is far larger than the real count <span class="katex-inline">$n_{j1}$</span>, that count becomes irrelevant in the fraction, and the ratio collapses toward <span class="katex-inline">$\frac{\alpha}{C\alpha} = 0.5$</span> — for every word equally, regardless of how predictive it actually was.</div>
+    </div>
+
+    <h3>What happens to the final prediction?</h3>
+    <p>If every likelihood term is roughly 0.5, the product of likelihoods for both classes becomes roughly equal, and cancels out when comparing the two classes. The prediction ends up depending <strong>only on the class priors</strong>.</p>
+    <p>Suppose, hypothetically, <span class="katex-inline">$P(y=1) = 0.7$</span> and <span class="katex-inline">$P(y=0) = 0.3$</span>. With likelihoods cancelled out, Naive Bayes would predict <strong>spam for every single message</strong>, regardless of its actual words. The model has stopped looking at the text entirely.</p>
+    <div class="callout warn"><span class="label">This is underfitting</span>Alpha too large means the model ignores the data (the likelihoods) and falls back on the priors alone.</div>
+
+    <h3>And a very small alpha?</h3>
+    <p>As <span class="katex-inline">$\alpha \to 0$</span>, the smoothed likelihood converges back to the unsmoothed value, <span class="katex-inline">$\frac{n_{j1}}{n_1}$</span>. This fits the training data's exact word frequencies as closely as possible, including any noise from words that appeared rarely by chance. <strong>This is overfitting.</strong></p>
+    <p>At test time, a genuinely new word that's part of the vocabulary stays protected by any <span class="katex-inline">$\alpha$</span> strictly greater than zero — that's the zero-probability problem from last time, distinct from the underflow problem coming up next. As <span class="katex-inline">$\alpha \to 0$</span> that protection gets vanishingly weak, even though it's technically still nonzero.</p>
+    <p><strong>Summary:</strong> alpha genuinely controls the bias-variance tradeoff, exactly like <span class="katex-inline">$k$</span> in kNN. Larger alpha means more underfitting; smaller alpha means more overfitting.</p>
+
+    <div class="quiz" id="quiz1">
+      <div class="quiz-head"><span>Quiz 1</span><span class="qtag">Alpha</span></div>
+      <div class="quiz-body">
+        <p class="quiz-q">As the Laplace smoothing constant α increases toward a very large value, what happens to Naive Bayes?</p>
+        <div class="quiz-opts">
+          <button class="quiz-opt">It tends to overfit, since it trusts the training likelihoods more</button>
+          <button class="quiz-opt" data-correct="true">It tends to underfit, since the likelihoods all drift toward the same value and the prediction ends up depending only on the class priors</button>
+          <button class="quiz-opt">Nothing changes, since alpha only matters for unseen words</button>
+          <button class="quiz-opt">It becomes undefined for large alpha</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="imbalance">
+    <div class="section-head"><span class="section-num">Mission 2</span><h2 style="margin-bottom:0">What imbalance does to Naive Bayes</h2></div>
+    <p>MailNest's inbox skews heavily ham over spam. Here's exactly how that imbalance can distort a prediction — in the direction that matters most for a spam filter: letting real spam slip through disguised as ham.</p>
+    <p>Suppose <span class="katex-inline">$P(y=0)=0.7$</span> and <span class="katex-inline">$P(y=1)=0.3$</span> (a ham-heavy prior, matching the real data). For a query message, the combined likelihoods work out to <span class="katex-inline">$P(\text{words}\mid y=1)=0.2$</span> and <span class="katex-inline">$P(\text{words}\mid y=0)=0.1$</span> — the words themselves actually point toward <strong>spam</strong>.</p>
+
+    <div class="toggle-wrap">
+      <button class="toggle" id="rebalanceToggle" aria-pressed="false" aria-label="Toggle rebalanced priors"></button>
+      <span class="toggle-label" id="rebalanceLabel">Rebalance the classes (equalize priors)</span>
+    </div>
+    <div class="balance-row">
+      <div class="score-card" id="spamCard">
+        <h4>SPAM SCORE — P(y=1) × P(words|y=1)</h4>
+        <div class="score-num" id="spamScore">0.3 × 0.2 = 0.060</div>
+        <div class="score-bar-track"><div class="score-bar-fill" id="spamBar" style="width:50%"></div></div>
+      </div>
+      <div class="score-card winner" id="hamCard">
+        <h4>HAM SCORE — P(y=0) × P(words|y=0)</h4>
+        <div class="score-num" id="hamScore">0.7 × 0.1 = 0.070</div>
+        <div class="score-bar-track"><div class="score-bar-fill" id="hamBar" style="width:58%"></div></div>
+      </div>
+    </div>
+    <div class="winner-banner" id="winnerBanner">Predicted: HAM — even though the word evidence favored spam (0.2 &gt; 0.1), the ham-heavy prior overrides it.</div>
+
+    <p>Rebalancing the training data — for example oversampling the minority spam class until both classes are equally represented — sets <span class="katex-inline">$P(y=1)=P(y=0)=0.5$</span>. With equal priors, they cancel out when comparing classes, leaving the <strong>likelihoods</strong> to genuinely drive the prediction. (This is distinct from SMOTE, which generates synthetic minority points by interpolation rather than duplicating rows outright — both rebalance the priors the same way.)</p>
+
+    <h3>Does rebalancing distort the likelihoods themselves?</h3>
+    <p>No. Suppose there are <span class="katex-inline">$n_0=1000$</span> ham messages and <span class="katex-inline">$n_1=500$</span> spam messages, and a word <span class="katex-inline">$w_j$</span> occurs in <span class="katex-inline">$n_{j1}=50$</span> of the spam messages.</p>
+    <div class="optiongrid">
+      <div class="optioncard"><span class="badge">Before</span><h4>P(wⱼ | y=1) = 50 / 500</h4><p style="margin:0;font-size:.9rem">= 0.1</p></div>
+      <div class="optioncard"><span class="badge">After duplicating to n₁=1000</span><h4>P(wⱼ | y=1) = 100 / 1000</h4><p style="margin:0;font-size:.9rem">= 0.1 — unchanged</p></div>
+    </div>
+    <p>Rebalancing only touches the class <strong>priors</strong>; it leaves the word-level <strong>likelihoods</strong> exactly as they were.</p>
+
+    <div class="quiz" id="quiz2">
+      <div class="quiz-head"><span>Quiz 2</span><span class="qtag">Imbalance</span></div>
+      <div class="quiz-body">
+        <p class="quiz-q">Why does rebalancing an imbalanced dataset help Naive Bayes make better predictions?</p>
+        <div class="quiz-opts">
+          <button class="quiz-opt">It changes the likelihoods to be more accurate</button>
+          <button class="quiz-opt" data-correct="true">It equalises the class priors, so the (unaffected) likelihoods are what actually drive the prediction</button>
+          <button class="quiz-opt">It removes the need for Laplace smoothing entirely</button>
+          <button class="quiz-opt">It has no real effect on Naive Bayes</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="underflow">
+    <div class="section-head"><span class="section-num">Mission 3</span><h2 style="margin-bottom:0">The underflow problem</h2></div>
+    <p>Naive Bayes multiplies together one class prior and <span class="katex-inline">$d$</span> likelihood values, all between 0 and 1. Imagine 2,000 words in a long message, each likelihood a plausible value between 0.05 and 0.3 — here's what happens to the running product as more words are multiplied in:</p>
+
+    <div class="barchart" id="underflowChart"></div>
+    <div class="barchart-labels" id="underflowLabels"></div>
+    <p style="font-size:.85rem;color:var(--ink-soft)">Bars show −log₁₀(product) — taller means a smaller (closer-to-zero) product. The red striped bars are where the true value is nonzero but too small for a computer to represent: it gets rounded down to exactly <code>0.0</code>.</p>
+    <p>By a few hundred words in, the product has already collapsed to <code>0.0</code>, even though every individual likelihood was perfectly reasonable. A computer stores numbers with a fixed number of bits (commonly float64), and a result this small simply can't be represented. This is the <strong>underflow problem</strong>, and it silently breaks every comparison between <span class="katex-inline">$P(y=1\mid\text{text})$</span> and <span class="katex-inline">$P(y=0\mid\text{text})$</span> once both collapse to zero.</p>
+    <p>Using fewer words avoids the problem, but throws away real information — exactly the words that might have been most useful for a long, word-rich message. <strong>That's not the fix.</strong></p>
+
+    <h3>The real fix: work in log-space</h3>
+    $$P(y=1 \mid w_1, \ldots, w_d) = P(y=1) \prod_{j=1}^{d} P(w_j \mid y=1)$$
+    <p>Take the log of both sides. Since <span class="katex-inline">$\log(ab) = \log a + \log b$</span>, the product turns into a <strong>sum</strong>:</p>
+    <div class="formula-card"><span class="fc-label">Log-space posterior</span>$$\log P(y=1 \mid w_1, \ldots, w_d) = \log P(y=1) + \sum_{j=1}^{d} \log P(w_j \mid y=1)$$</div>
+    <p>Summing many small numbers together is numerically stable in a way multiplying them never is — the numbers stay in a normal range instead of shrinking toward zero.</p>
+
+    <div class="console">
+      <div class="line"><span class="label">Sum of logs (stable):</span> <span class="val">−3696.62</span></div>
+      <div class="line"><span class="label">Exponentiating back:</span> <span class="val">0.0</span> <span class="label">← still underflows, but we never needed this value directly</span></div>
+    </div>
+
+    <h3>Is comparing logs still valid?</h3>
+    <p>Yes. Log is <strong>monotonic</strong>: if <span class="katex-inline">$a > b$</span>, then <span class="katex-inline">$\log a > \log b$</span>, always — regardless of whether the results are negative, which they will be here since we're taking the log of numbers less than 1. So comparing <span class="katex-inline">$\log P(y=1\mid\text{text})$</span> against <span class="katex-inline">$\log P(y=0\mid\text{text})$</span> gives exactly the same winner the raw probabilities would have, without ever computing those tiny raw values at all.</p>
+    <p style="font-size:.9rem;color:var(--ink-soft)">If the actual probability value is needed back, not just the winning class, naively exponentiating the summed log still underflows. The standard safe way to recover it is the <strong>log-sum-exp</strong> trick.</p>
+
+    <div class="quiz" id="quiz3">
+      <div class="quiz-head"><span>Quiz 3</span><span class="qtag">Underflow</span></div>
+      <div class="quiz-body">
+        <p class="quiz-q">Why does working in log-space solve Naive Bayes' underflow problem?</p>
+        <div class="quiz-opts">
+          <button class="quiz-opt">Logs make every probability exactly 1, avoiding the issue entirely</button>
+          <button class="quiz-opt" data-correct="true">Logs turn a product of many small numbers into a sum, which stays numerically stable, and comparisons between classes are unaffected since log is monotonic</button>
+          <button class="quiz-opt">Logs remove the need for class priors</button>
+          <button class="quiz-opt">Logs only work for positive numbers, so this wouldn't actually work here</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="importance">
+    <div class="section-head"><span class="section-num">Mission 4</span><h2 style="margin-bottom:0">Reading feature importance straight from the model</h2></div>
+    <p>A trained model's "weights" are exactly its class priors and likelihoods. The priors don't depend on which words are in any particular message, so they can't explain <em>why this specific message</em> got its prediction. For that, we need the likelihoods.</p>
+    <p>It's tempting to look at <span class="katex-inline">$P(w_j \mid \hat{y})$</span> — the raw likelihood under the predicted class — and call the largest values "most important." This is misleading: a word can have a large likelihood under spam and still tell us almost nothing, if its likelihood under ham is just as large.</p>
+    <div class="formula-card"><span class="fc-label">The right measure: likelihood ratio</span>$$\text{ratio}_j = \frac{P(w_j \mid y=1)}{P(w_j \mid y=0)}$$</div>
+    <p>A ratio near 1 means the word barely discriminates, no matter how large either likelihood is. A ratio far from 1 means the word genuinely pulls the prediction one way.</p>
+
+    <p>A query message contains "call," "u," "free," and "prize," and Naive Bayes predicted spam:</p>
+    <div class="sort-btns">
+      <button class="sort-btn active" data-sort="raw">Sort by raw likelihood P(w|spam)</button>
+      <button class="sort-btn" data-sort="ratio">Sort by discriminative ratio</button>
+    </div>
+    <table id="importanceTable">
+      <thead><tr><th>Word</th><th>P(w|y=1)</th><th>P(w|y=0)</th><th>Ratio</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="sort-insight" id="sortInsight"></p>
+    <p>This is exactly the explainability MailNest's Trust &amp; Safety team asked for: for any flagged message, point to the words with the most extreme likelihood <em>ratios</em>, not the largest raw likelihoods, as the ones that tipped the decision.</p>
+  </section>
+
+  <section id="outliers">
+    <div class="section-head"><span class="section-num">Mission 5</span><h2 style="margin-bottom:0">Outliers at training time and at test time</h2></div>
+    <div class="optiongrid">
+      <div class="optioncard">
+        <span class="badge">Test-time outlier</span>
+        <h4>A word Laplace smoothing protects</h4>
+        <p style="font-size:.92rem;margin:0">Part of the vocabulary (seen in training), but zero occurrences in one class. Smoothing keeps its likelihood strictly positive instead of exactly zero.</p>
+      </div>
+      <div class="optioncard">
+        <span class="badge">A sharper gap</span>
+        <h4>A word smoothing can't touch</h4>
+        <p style="font-size:.92rem;margin:0">A real <code>CountVectorizer</code> pipeline builds its vocabulary only from training data. A test word never seen anywhere in training isn't a column at all — it's silently dropped, not assigned a zero. Smoothing has nothing to act on.</p>
+      </div>
+    </div>
+    <p>If MailNest wants to catch brand-new scam vocabulary the moment it appears, this gap — not smoothing — is where to invest next: retraining on a rolling window of recent messages, or falling back to character-level or subword features that can say <em>something</em> about a word never seen whole.</p>
+
+    <h3>Train-time outliers</h3>
+    <p>A different kind of outlier hides inside the training data itself: a word that appears extremely rarely. Suppose a word <span class="katex-inline">$w_j$</span> occurs in only <span class="katex-inline">$n_{j1}=1$</span> spam message out of <span class="katex-inline">$n_1=1000$</span> total:</p>
+    $$P(w_j \mid y=1) = \frac{1}{1000} = 0.001$$
+    <p>This word might be genuinely rare, or it might just be noise — a typo, an unusual name — that happened to appear once. A likelihood this small, this confidently, based on a single occurrence, is risky to trust.</p>
+    <div class="optiongrid">
+      <div class="optioncard pref"><span class="badge">Preferred</span><h4>A slightly larger alpha</h4><p style="font-size:.92rem;margin:0">Pulls the single-occurrence likelihood toward a more moderate value, without going anywhere near Mission 1's underfitting territory.</p></div>
+      <div class="optioncard"><span class="badge">Blunter</span><h4>A minimum-count threshold</h4><p style="font-size:.92rem;margin:0">Only include a word if it occurs more than some threshold (say, 10+ times). All-or-nothing — a word either counts fully or is ignored entirely.</p></div>
+    </div>
+    <p>Smoothing handles both rare training words and entirely unseen test words more gracefully, using the same mechanism. One practical constraint: with <span class="katex-inline">$d$</span> potentially in the thousands, tuning a separate alpha per word is impractical — a single shared alpha across all words is what's actually used.</p>
+  </section>
+
+  <section id="variants">
+    <div class="section-head"><span class="section-num">Mission 6</span><h2 style="margin-bottom:0">Bernoulli vs. Multinomial Naive Bayes</h2></div>
+    <p>Everything so far has quietly assumed each word is either <strong>present or absent</strong> in a message — a 0/1 feature. This is <strong>Bernoulli Naive Bayes</strong>. "Free" appearing once might be a mild signal; "free free free free!!!" appearing four times is a much stronger one — Bernoulli throws that difference away entirely.</p>
+    <p><strong>Multinomial Naive Bayes</strong> instead stores the actual count of each word per message.</p>
+
+    <div class="toggle-wrap">
+      <button class="toggle" id="variantToggle" aria-pressed="false" aria-label="Toggle between Bernoulli and Multinomial representation"></button>
+      <span class="toggle-label" id="variantLabel">Representation: Bernoulli (presence/absence)</span>
+    </div>
+    <div class="repeat-demo">
+      <span class="repeat-words">"free free free free !!!"</span>
+      <span style="color:var(--ink-soft)">→</span>
+      <span class="repeat-vec" id="variantOut">free : 1</span>
+    </div>
+
+    <table>
+      <thead><tr><th></th><th>Bernoulli NB</th><th>Multinomial NB</th></tr></thead>
+      <tbody>
+        <tr><td>Feature representation</td><td>Word present (1) or absent (0)</td><td>Count of word occurrences</td></tr>
+        <tr><td>Values per word</td><td>2</td><td>k+1 (however many distinct counts occur)</td></tr>
+        <tr><td>Compute cost</td><td>Lower</td><td>Higher</td></tr>
+        <tr><td>Captures repetition</td><td>No</td><td>Yes</td></tr>
+      </tbody>
+    </table>
+
+    <div class="quiz" id="quiz4">
+      <div class="quiz-head"><span>Quiz 4</span><span class="qtag">Variants</span></div>
+      <div class="quiz-body">
+        <p class="quiz-q">A message contains the word "free" three times. Which version of Naive Bayes captures that repetition in its features?</p>
+        <div class="quiz-opts">
+          <button class="quiz-opt">Bernoulli Naive Bayes, since it tracks every occurrence</button>
+          <button class="quiz-opt" data-correct="true">Multinomial Naive Bayes, since it stores word counts rather than just presence or absence</button>
+          <button class="quiz-opt">Neither version captures repetition</button>
+          <button class="quiz-opt">Both capture it identically</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="filter">
+    <div class="section-head"><span class="section-num">Mission 7</span><h2 style="margin-bottom:0">Building the real filter</h2></div>
+    <p><code>CountVectorizer</code> converts every message into a row of word counts, one column per unique word across the whole training set. Any single message only contains a handful of them, so most entries are 0 — the result is stored as a <strong>sparse matrix</strong>, keeping only the non-zero counts and saving enormous memory.</p>
+    <div class="statrow">
+      <div class="statcard"><div class="big">4,179 × 7,615</div><div class="lbl">training messages × vocabulary</div></div>
+      <div class="statcard"><div class="big">1,393 × 7,615</div><div class="lbl">test messages × same vocabulary</div></div>
+    </div>
+    <div class="callout"><strong>Fit only on training data.</strong> Exactly like a scaler, <code>CountVectorizer</code> is fit once on training messages, then used to transform the test messages — never re-fit on test data. Because the vocabulary is fixed at fit time, any word in a test message that never appeared in training is silently dropped when transforming. That's the gap Mission 5 flagged: smoothing rescues in-vocabulary words that are merely rare in one class, but can't rescue a word the vectorizer never learned about at all.</div>
+    <p><strong>Does Naive Bayes need scaled features?</strong> No. Unlike kNN, which is distance-based, Naive Bayes is an <strong>information-based</strong> algorithm — it works with probabilities and counts, not distances between points. Scaling exists to make distances comparable across features; it has no role here.</p>
+
+    <div class="quiz" id="quiz5">
+      <div class="quiz-head"><span>Quiz 5</span><span class="qtag">Scaling</span></div>
+      <div class="quiz-body">
+        <p class="quiz-q">Why doesn't Naive Bayes need its input features scaled, the way kNN does?</p>
+        <div class="quiz-opts">
+          <button class="quiz-opt">Naive Bayes secretly scales the data internally before training</button>
+          <button class="quiz-opt">Naive Bayes is distance-based, just like kNN, so scaling matters equally for both</button>
+          <button class="quiz-opt" data-correct="true">Naive Bayes is information-based, working with probabilities and counts rather than distances between points, so scaling has no role to play</button>
+          <button class="quiz-opt">Scaling would break the Laplace smoothing calculation</button>
+        </div>
+        <div class="quiz-feedback"></div>
+      </div>
+    </div>
+
+    <h3>Tuning alpha properly</h3>
+    <p>Mission 1 showed alpha genuinely trades off under- and overfitting — time to tune it with cross-validation, the same way <code>max_depth</code> was tuned earlier in the course. Because the data is imbalanced, <strong>F1 score</strong> (not accuracy) is used for scoring: it balances precision and recall, giving a far more honest picture than accuracy would on a lopsided dataset.</p>
+
+    <div class="barchart" id="gridChart"></div>
+    <div class="barchart-labels" id="gridLabels"></div>
+    <p style="font-size:.85rem;color:var(--ink-soft)">Mean F1 across 3-fold cross-validation, bars scaled from a 0.80 baseline. α = 1 ranks best — right in the middle of the range tried, exactly matching Mission 1's prediction: too small overfits, too large underfits, and the sweet spot is found by tuning, not guessing.</p>
+
+    <div class="statrow">
+      <div class="statcard" style="grid-column:1/-1"><div class="big">0.9214</div><div class="lbl">Test F1 score, using the best α found (α = 1)</div></div>
+    </div>
+
+    <h3>Full circle: predicting the message we started with</h3>
+    <p>Back at the very start, <em>"I, Nigerian prince, need your help. Send money"</em> was instantly recognizable as spam, just from the words. Does the trained model agree?</p>
+    <div class="calc">
+      <button class="reveal-btn" data-reveal="fc1">Run the trained filter</button>
+      <div class="reveal-box" id="fc1">
+        <div class="console" style="margin:0">
+          <div class="line"><span class="label">Message:</span> Nigerian prince needs your help. Send money</div>
+          <div class="line"><span class="label">Predicted:</span> <span class="val">HAM</span></div>
+        </div>
+        <p style="margin-top:12px;font-size:.9rem;color:var(--ink-soft)">Everything worked through in this chapter — tokenizing, the naive assumption, priors, likelihoods, smoothing, log-space stability — is exactly what just ran, in milliseconds, to reach this one prediction. No filter is perfect; it's a reminder that a model only knows what its training vocabulary taught it.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="wrapup">
+    <div class="section-head"><span class="section-num">Wrap-up</span><h2 style="margin-bottom:0">What we now know</h2></div>
+    <ul class="takeaways">
+      <li>Alpha is a real hyperparameter, not just a zero-avoidance hack: too large and the likelihoods collapse toward 0.5, leaving predictions dependent only on the class priors (underfitting); too small and the model fits training noise too closely (overfitting).</li>
+      <li>Class imbalance can distort predictions by letting the priors dominate over the likelihoods. Rebalancing fixes this by equalising the priors, and provably leaves the likelihoods themselves unchanged.</li>
+      <li>Multiplying many probabilities together causes underflow. Working in log-space turns that product into a sum, which stays numerically stable, and comparisons between classes remain valid since log is monotonic.</li>
+      <li>A trained model's likelihoods double as feature importance: the words with the largest likelihood <em>ratio</em> for the predicted class are the ones actually driving that prediction — not the largest raw likelihood.</li>
+      <li>Test-time outliers are unseen words, handled by Laplace smoothing. Train-time outliers are rare words with very few occurrences, best handled with a slightly larger alpha rather than a hard count threshold.</li>
+      <li>Bernoulli Naive Bayes tracks word presence/absence; Multinomial Naive Bayes tracks word counts, capturing repetition at a higher computational cost.</li>
+      <li><code>CountVectorizer</code> turns text into a sparse count matrix, fit on training data only. Naive Bayes needs no feature scaling, since it's information-based, not distance-based.</li>
+    </ul>
+
+    <div class="stamp" style="background:rgba(30,82,54,.06);border-color:var(--green-600)">
+      <span class="ticket-no" style="color:var(--green-700)">TICKET #1 · CLOSED</span>
+      <p style="color:var(--ink-soft)">The filter is built, tuned with proper cross-validation, and evaluated with F1 score to account for our imbalanced inbox. It correctly flags the exact kind of message that started this whole conversation, and for any flagged message, we can point to precisely which words drove the decision.</p>
+    </div>
+    <p style="margin-top:18px">That closes out MailNest's spam filter, end to end: from "why does this word choice matter" all the way to a tuned, explainable, working classifier.</p>
+    <p style="font-size:.92rem;color:var(--ink-soft)"><strong>Next up:</strong> a new kind of question — instead of asking which words are in a message, what if the best way to separate two classes is to find the single boundary with the widest possible margin between them?</p>
+  </section>
+
+  </main>
+</div>
+
+<footer>
+  <div class="fname">Naive Bayes 2 post read</div>
+  <p>A MailNest Trust &amp; Safety field note</p>
+</footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  renderMathInElement(document.body, {
+    delimiters: [{left:"$$", right:"$$", display:true},{left:"$", right:"$", display:false}],
+    throwOnError:false
+  });
+
+  function rerender(el){ if(window.renderMathInElement) renderMathInElement(el, {delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}], throwOnError:false}); }
+
+  // reveal buttons
+  document.querySelectorAll('.reveal-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var box = document.getElementById(btn.dataset.reveal);
+      var showing = box.classList.toggle('shown');
+      btn.textContent = showing ? 'Hide' : (btn.dataset.reveal === 'fc1' ? 'Run the trained filter' : 'Reveal the answer');
+    });
+  });
+
+  // ---- Alpha slider (Mission 1) ----
+  var alphaSlider1 = document.getElementById('alphaSlider1');
+  var alphaVal1 = document.getElementById('alphaVal1');
+  var alphaFormula1 = document.getElementById('alphaFormula1');
+  var alphaResult1 = document.getElementById('alphaResult1');
+  var alphaBar1 = document.getElementById('alphaBar1');
+  var presetBtns = document.querySelectorAll('.preset-btn');
+  function updateAlpha1(a){
+    var nj1=10, n1=100, C=2;
+    var p = (nj1+a)/(n1+C*a);
+    alphaSlider1.value = a;
+    alphaVal1.textContent = 'α = ' + a.toLocaleString();
+    alphaFormula1.textContent = '(10 + '+a.toLocaleString()+') / (100 + 2×'+a.toLocaleString()+')';
+    alphaResult1.textContent = p.toFixed(4);
+    alphaBar1.style.width = (p*100).toFixed(2)+'%';
+    presetBtns.forEach(function(b){ b.classList.toggle('active', parseFloat(b.dataset.alpha)===a); });
+  }
+  alphaSlider1.addEventListener('input', function(){ updateAlpha1(parseFloat(alphaSlider1.value)); });
+  presetBtns.forEach(function(b){ b.addEventListener('click', function(){ updateAlpha1(parseFloat(b.dataset.alpha)); }); });
+
+  // ---- Imbalance toggle (Mission 2) ----
+  var rebalanceToggle = document.getElementById('rebalanceToggle');
+  var rebalanceLabel = document.getElementById('rebalanceLabel');
+  function updateBalance(){
+    var on = rebalanceToggle.getAttribute('aria-pressed') === 'true';
+    var pSpam = on ? 0.5 : 0.3, pHam = on ? 0.5 : 0.7;
+    var lSpam = 0.2, lHam = 0.1;
+    var sSpam = pSpam*lSpam, sHam = pHam*lHam;
+    var maxScore = 0.12;
+    document.getElementById('spamScore').textContent = pSpam+' × '+lSpam+' = '+sSpam.toFixed(3);
+    document.getElementById('hamScore').textContent = pHam+' × '+lHam+' = '+sHam.toFixed(3);
+    document.getElementById('spamBar').style.width = ((sSpam/maxScore)*100).toFixed(1)+'%';
+    document.getElementById('hamBar').style.width = ((sHam/maxScore)*100).toFixed(1)+'%';
+    var spamCard = document.getElementById('spamCard'), hamCard = document.getElementById('hamCard');
+    var banner = document.getElementById('winnerBanner');
+    if (sSpam > sHam){
+      spamCard.classList.add('winner'); hamCard.classList.remove('winner');
+      banner.textContent = 'Predicted: SPAM — with equal priors, the likelihoods (which genuinely favor spam) now decide the outcome.';
+    } else {
+      hamCard.classList.add('winner'); spamCard.classList.remove('winner');
+      banner.textContent = 'Predicted: HAM — even though the word evidence favored spam (0.2 > 0.1), the ham-heavy prior overrides it.';
+    }
+    rebalanceLabel.textContent = on ? 'Rebalanced: priors equal at 0.5 / 0.5' : 'Rebalance the classes (equalize priors)';
+  }
+  rebalanceToggle.addEventListener('click', function(){
+    var on = rebalanceToggle.getAttribute('aria-pressed') === 'true';
+    rebalanceToggle.setAttribute('aria-pressed', !on);
+    updateBalance();
+  });
+  updateBalance();
+
+  // ---- Underflow chart (Mission 3) ----
+  var underflowData = [
+    {label:'10 words', mag:8.6, underflow:false},
+    {label:'100 words', mag:80.9, underflow:false},
+    {label:'500 words', mag:92, underflow:true},
+    {label:'1000 words', mag:92, underflow:true},
+    {label:'2000 words', mag:92, underflow:true}
+  ];
+  var maxMag = 92;
+  var chartEl = document.getElementById('underflowChart');
+  var labelsEl = document.getElementById('underflowLabels');
+  underflowData.forEach(function(d){
+    var col = document.createElement('div'); col.className='bcol';
+    var fill = document.createElement('div'); fill.className='bfill'+(d.underflow?' underflow':'');
+    fill.style.height = (d.mag/maxMag*100)+'%';
+    var val = document.createElement('div'); val.className='bval';
+    val.textContent = d.underflow ? '→ 0.0' : '10⁻'+d.mag.toFixed(0);
+    fill.appendChild(val);
+    col.appendChild(fill);
+    chartEl.appendChild(col);
+    var lab = document.createElement('span'); lab.textContent = d.label;
+    labelsEl.appendChild(lab);
+  });
+
+  // ---- Feature importance sortable table (Mission 4) ----
+  var featureData = [
+    {word:'call', p1:0.35, p0:0.30, ratio:1.17},
+    {word:'u', p1:0.25, p0:0.28, ratio:0.89},
+    {word:'free', p1:0.30, p0:0.02, ratio:15.0},
+    {word:'prize', p1:0.15, p0:0.01, ratio:15.0}
+  ];
+  var importanceBody = document.querySelector('#importanceTable tbody');
+  var sortInsight = document.getElementById('sortInsight');
+  var sortBtns = document.querySelectorAll('.sort-btn');
+  function renderImportance(mode){
+    var sorted = featureData.slice().sort(function(a,b){ return mode==='raw' ? b.p1-a.p1 : b.ratio-a.ratio; });
+    var topVal = mode==='raw' ? sorted[0].p1 : sorted[0].ratio;
+    importanceBody.innerHTML = '';
+    sorted.forEach(function(d){
+      var tr = document.createElement('tr');
+      var isTop = (mode==='raw' ? d.p1 : d.ratio) === topVal;
+      if (isTop) tr.className = 'highlight';
+      tr.innerHTML = '<td>'+d.word+'</td><td>'+d.p1.toFixed(2)+'</td><td>'+d.p0.toFixed(2)+'</td><td>'+d.ratio.toFixed(2)+'</td>';
+      importanceBody.appendChild(tr);
+    });
+    sortInsight.textContent = mode==='raw'
+      ? '"call" has the single largest raw likelihood under spam — yet it\'s nearly as common in ham, so it barely discriminates.'
+      : '"free" and "prize" rise to the top: fifteen times more likely in spam than ham. These are the words genuinely driving the prediction.';
+  }
+  sortBtns.forEach(function(b){
+    b.addEventListener('click', function(){
+      sortBtns.forEach(function(x){ x.classList.remove('active'); });
+      b.classList.add('active');
+      renderImportance(b.dataset.sort);
+    });
+  });
+  renderImportance('raw');
+
+  // ---- Bernoulli / Multinomial toggle (Mission 6) ----
+  var variantToggle = document.getElementById('variantToggle');
+  var variantLabel = document.getElementById('variantLabel');
+  var variantOut = document.getElementById('variantOut');
+  variantToggle.addEventListener('click', function(){
+    var on = variantToggle.getAttribute('aria-pressed') === 'true';
+    on = !on;
+    variantToggle.setAttribute('aria-pressed', on);
+    variantLabel.textContent = 'Representation: ' + (on ? 'Multinomial (word counts)' : 'Bernoulli (presence/absence)');
+    variantOut.textContent = on ? 'free : 4' : 'free : 1';
+  });
+
+  // ---- GridSearchCV bar chart (Mission 7) ----
+  var gridData = [
+    {label:'α=0.01', f1:0.8937, rank:2},
+    {label:'α=0.1', f1:0.8897, rank:3},
+    {label:'α=1', f1:0.9022, rank:1},
+    {label:'α=10', f1:0.8603, rank:4}
+  ];
+  var base = 0.80, top = 0.92;
+  var gridChart = document.getElementById('gridChart');
+  var gridLabels = document.getElementById('gridLabels');
+  gridData.forEach(function(d){
+    var col = document.createElement('div'); col.className='bcol';
+    var fill = document.createElement('div'); fill.className='bfill'+(d.rank===1?' best':'');
+    var pct = Math.max(2, (d.f1-base)/(top-base)*100);
+    fill.style.height = pct+'%';
+    var val = document.createElement('div'); val.className='bval'; val.textContent = d.f1.toFixed(4);
+    fill.appendChild(val);
+    col.appendChild(fill);
+    gridChart.appendChild(col);
+    var lab = document.createElement('span'); lab.textContent = d.label + (d.rank===1?' ★':'');
+    gridLabels.appendChild(lab);
+  });
+
+  // ---- quizzes ----
+  var quizExplanations = {
+    quiz1: 'A large alpha pushes every likelihood toward 1/C = 0.5, regardless of the word\u2019s actual frequency. Once likelihoods stop varying meaningfully, the prediction collapses to whichever class has the larger prior, ignoring the message\u2019s actual words entirely.',
+    quiz2: 'As the worked example showed, rebalancing leaves each word\u2019s likelihood unchanged, since duplicating or removing rows scales both the count and the total proportionally. What changes is the class priors \u2014 exactly the part that was distorting predictions.',
+    quiz3: 'log(ab) = log a + log b converts the unstable product into a stable sum. Since log is monotonic, whichever class had the higher raw probability still has the higher log-probability, so comparisons stay valid without ever computing the tiny raw product.',
+    quiz4: 'Bernoulli Naive Bayes only records whether "free" appeared at all (1) or not (0), losing the information that it appeared three times. Multinomial Naive Bayes stores the actual count, so it\u2019s the one that can use repetition as a signal.',
+    quiz5: 'Scaling exists to make distances comparable across features with different units or ranges, which matters for distance-based algorithms like kNN. Naive Bayes never computes a distance at all; it works entirely with probabilities and counts, so there\u2019s nothing for scaling to fix.'
+  };
+  document.querySelectorAll('.quiz').forEach(function(quiz){
+    var opts = quiz.querySelectorAll('.quiz-opt');
+    var fb = quiz.querySelector('.quiz-feedback');
+    opts.forEach(function(opt){
+      opt.addEventListener('click', function(){
+        if (quiz.dataset.answered) return;
+        quiz.dataset.answered = 'true';
+        var isCorrect = opt.dataset.correct === 'true';
+        opts.forEach(function(o){
+          o.disabled = true;
+          if (o.dataset.correct === 'true') o.classList.add('correct');
+          else if (o === opt) o.classList.add('incorrect');
+        });
+        fb.classList.add('shown');
+        fb.classList.add(isCorrect ? 'right' : 'wrong');
+        fb.innerHTML = '<span class="verdict">' + (isCorrect ? 'Correct.' : 'Not quite.') + '</span>' + quizExplanations[quiz.id];
+        rerender(fb);
+      });
+    });
+  });
+
+  // ---- scroll-spy rail ----
+  var dots = document.querySelectorAll('.rail-dot');
+  var sections = Array.from(dots).map(function(d){ return document.getElementById(d.dataset.target); });
+  dots.forEach(function(dot){
+    dot.addEventListener('click', function(){ document.getElementById(dot.dataset.target).scrollIntoView({behavior:'smooth'}); });
+    dot.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); document.getElementById(dot.dataset.target).scrollIntoView({behavior:'smooth'}); } });
+  });
+  function onScroll(){
+    var pos = window.scrollY + window.innerHeight*0.3;
+    var activeIdx = 0;
+    sections.forEach(function(sec,i){ if (sec && sec.offsetTop <= pos) activeIdx = i; });
+    dots.forEach(function(d,i){ d.classList.toggle('active', i===activeIdx); });
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+});
+</script>
+</body>
+</html>
